@@ -13,7 +13,6 @@ async function uploadFiles(dateString) {
   let kind = 'images';
 
   fs.readdirSync(filePath).forEach(async folderName => {
-    console.log(folderName);
     let pageNumber = folderName;
     let fileCount = 1;
 
@@ -36,8 +35,8 @@ async function uploadFiles(dateString) {
           name, 
           bucket, 
           timeCreated,
-          date: today,
-          pageNumber
+          date: dateString,
+          pageNumber: parseInt(pageNumber)
         }
       });
       
@@ -46,8 +45,22 @@ async function uploadFiles(dateString) {
   });
 }
 
+function formatDate(date) {
+  var d = new Date(date),
+      month = '' + (d.getMonth() + 1),
+      day = '' + d.getDate(),
+      year = d.getFullYear();
+
+  if (month.length < 2) 
+      month = '0' + month;
+  if (day.length < 2) 
+      day = '0' + day;
+
+  return [year, month, day].join('-');
+}
+
 if(!isNaN(Date.parse(process.argv[2]))){
-  uploadFiles(process.argv[2]).catch(console.error);
+  uploadFiles(formatDate(process.argv[2])).catch(console.error);
 } else {
   console.error('The date argument is not correct. Please check.');
 }

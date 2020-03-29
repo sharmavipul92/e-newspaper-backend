@@ -10,10 +10,12 @@ async function getMainPage(req, res) {
   let news = [];
   let mainPage;
   
+  console.log(formatDate(date))
   let query = datastore.createQuery(kind)
-                       .filter('date', '=', new Date(formatDate(date)))
+                       .filter('date', '=', formatDate(date))
                        .filter('pageNumber', '=', parseInt(pageNum));
   let [newsData] = await datastore.runQuery(query);
+  console.log(newsData);
   for(let snippet of newsData) {
     if(snippet.name.includes('main')){
       mainPage = `${domain}/${snippet.bucket}/${snippet.name}`;
