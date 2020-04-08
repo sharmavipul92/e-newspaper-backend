@@ -1,10 +1,15 @@
 const {Datastore} = require('@google-cloud/datastore');
+const {Storage} = require('@google-cloud/storage');
+const path = require('path');
+const fs = require('fs');
 const kind = 'images';
 const domain = 'https://storage.googleapis.com';
+const bucketName = 'seema-sandesh-epaper';
+
 const datastore = new Datastore();
+const storage = new Storage();
 
 async function postCoordinates(req, res) {
-  console.log(req.body);
   let { date, pageNum, newsItems } = req.body;
   console.log(date, pageNum);
   let query = datastore.createQuery(kind)
@@ -23,13 +28,27 @@ async function postCoordinates(req, res) {
   res.send({code: 200, message: 'successfully updated coordinates'});
 }
 
-async function getNews(req, res) {
+
+async function getSingleNews(req, res) {
+  let id = req.params.id;
+  id = id.replace(/-/g, '/') + '.jpg';
+  console.log(id);
+  
+  let [news] = await datastore.get(datastore.key([kind, id]));
+  console.log(news);
+  if(news) {
+    res.send({ code: 200, newsLink: `${domain}/${news.bucket}/${news.name}` });
+  } else {
+    res.send({ code: 204 });
+  }
+}
+
+async function getPage(req, res) {
   let { date, pageNum } = req.params;
   console.log(date, pageNum);
   let news = [];
   let mainPage;
   
-  // console.log(formatDate(date))
   let query = datastore.createQuery(kind)
                        .filter('date', '=', formatDate(date))
                        .filter('pageNumber', '=', parseInt(pageNum));
@@ -49,6 +68,62 @@ async function getNews(req, res) {
   res.send({code, news, mainPage});
 }
 
+async function getFullPaper(req, res) {
+  let date = req.params.date;
+  console.log(date);
+  let pages = {};
+  
+  let query = datastore.createQuery(kind)
+                       .filter('date', '=', formatDate(date));
+  let [newsData] = await datastore.runQuery(query);
+  for(let snippet of newsData) {
+    if(!pages[snippet.pageNumber]){
+      pages[snippet.pageNumber] = { mainPage: '', news: [] };
+    }
+    if(snippet.name.includes('main')){
+      pages[snippet.pageNumber].mainPage = `${domain}/${snippet.bucket}/${snippet.name}`;
+    } else {
+      pages[snippet.pageNumber].news.push({
+        link: `${domain}/${snippet.bucket}/${snippet.name}`,
+        id: snippet.name,
+        coordinates: snippet.coordinates
+      })
+    }
+  }
+  let code = Object.keys(pages).length ? 200 : 204;
+  res.send({code, pages});
+}
+
+async function downloadNewspaper(req, res, next) {
+  let dateStr = req.params.date;
+  console.log(dateStr);
+  const cwd = path.join(__dirname, '/downloads');
+  let fileName = `seema-sandesh-${formatDate(dateStr)}.pdf`;
+  let srcFilename = `pdf/${fileName}`;
+  let destFilename = path.join(cwd, fileName);
+
+  try {
+    if (!fs.existsSync(destFilename)) {
+      let file = storage.bucket(bucketName).file(srcFilename);
+      file.exists().then(async (data) => {
+        if(data[0]) {
+          await file.download({ destination: destFilename });
+          res.download(destFilename);
+        } else {
+          throw new Error('file not found');
+        }
+      }).catch((err) => {
+        console.error(err);
+        next(err);
+      })
+    }
+    
+  } catch (error) {
+    console.error('file not found.');
+    next(error);
+  }
+}
+
 function formatDate(date) {
   var d = new Date(date),
       month = '' + (d.getMonth() + 1),
@@ -64,6 +139,9 @@ function formatDate(date) {
 }
 
 module.exports = {
-  getNews,
+  getPage,
   postCoordinates,
+  getFullPaper,
+  downloadNewspaper,
+  getSingleNews,
 }
