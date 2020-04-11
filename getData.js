@@ -3,7 +3,7 @@ const {Storage} = require('@google-cloud/storage');
 const path = require('path');
 const fs = require('fs');
 const kind = 'images';
-const domain = 'https://storage.googleapis.com';
+const domain = 'https://storage.cloud.google.com';
 const bucketName = 'seema-sandesh-epaper';
 
 const datastore = new Datastore();
@@ -116,6 +116,8 @@ async function downloadNewspaper(req, res, next) {
         console.error(err);
         next(err);
       })
+    } else {
+      res.download(destFilename);
     }
     
   } catch (error) {

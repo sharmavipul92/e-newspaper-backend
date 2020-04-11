@@ -16,32 +16,44 @@ async function uploadFiles(dateString) {
     let pageNumber = folderName;
     let fileCount = 1;
 
-    fs.readdirSync(`${filePath}/${pageNumber}`).forEach(async fileName => {
-      let destination = uploadPath + pageNumber + '/' + (fileName.includes('main') ? 'main.jpg' : (fileCount++ + '.jpg'));
-      
-      let [{metadata: {id, mediaLink, name, bucket, timeCreated}}] = await storage.bucket(bucketName).upload(`${filePath}/${pageNumber}/${fileName}`, {
+    if(folderName.includes('pdf')){
+      console.log(folderName);
+      let destination = `pdf/seema-sandesh-${dateString}.pdf`;
+      await storage.bucket(bucketName).upload(`${filePath}/${folderName}`, {
         destination,
         metadata: {
           cacheControl: 'public, max-age=31536000',
         },
       });
       console.log(`${destination} uploaded to ${bucketName}.`);
-  
-      await datastore.save({
-        key: datastore.key([kind, name]),
-        data: { 
-          id, 
-          mediaLink, 
-          name, 
-          bucket, 
-          timeCreated,
-          date: dateString,
-          pageNumber: parseInt(pageNumber)
-        }
+    } else {
+      fs.readdirSync(`${filePath}/${pageNumber}`).forEach(async fileName => {
+        let destination = uploadPath + pageNumber + '/' + (fileName.includes('main') ? 'main.jpg' : (fileCount++ + '.jpg'));
+        
+        let [{metadata: {id, mediaLink, name, bucket, timeCreated}}] = await storage.bucket(bucketName).upload(`${filePath}/${pageNumber}/${fileName}`, {
+          destination,
+          metadata: {
+            cacheControl: 'public, max-age=31536000',
+          },
+        });
+        console.log(`${destination} uploaded to ${bucketName}.`);
+    
+        await datastore.save({
+          key: datastore.key([kind, name]),
+          data: { 
+            id, 
+            mediaLink, 
+            name, 
+            bucket, 
+            timeCreated,
+            date: dateString,
+            pageNumber: parseInt(pageNumber)
+          }
+        });
+        
+        console.log(`Saved ${fileName} to datastore as ${(fileName.includes('main') ? 'main.jpg' : ((fileCount-1) + '.jpg'))}`);
       });
-      
-      console.log(`Saved ${fileName} to datastore as ${(fileName.includes('main') ? 'main.jpg' : ((fileCount-1) + '.jpg'))}`);
-    });
+    }
   });
 }
 
