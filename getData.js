@@ -1,7 +1,5 @@
 const {Datastore} = require('@google-cloud/datastore');
 const {Storage} = require('@google-cloud/storage');
-const path = require('path');
-const fs = require('fs');
 const kind = 'images';
 const domain = 'https://storage.cloud.google.com';
 const bucketName = 'seema-sandesh-epaper';
@@ -96,6 +94,36 @@ async function getFullPaper(req, res) {
 
 async function downloadNewspaper(req, res, next) {
   let dateStr = req.params.date;
+  let srcFilename;
+  console.log(dateStr);
+  if(!isNaN(Date.parse(dateStr))) {
+    let fileName = `seema-sandesh-${formatDate(dateStr)}.pdf`;
+    srcFilename = `pdf/${fileName}`;
+  } else {
+    srcFilename = dateStr.split('-').join('/') + '.jpg';
+  }
+
+  try {
+    let file = storage.bucket(bucketName).file(srcFilename);
+    file.exists().then(async (data) => {
+      if(data[0]) {
+        res.send({code: 200, link: `${domain}/${bucketName}/${srcFilename}` });
+      } else {
+        throw new Error('file not found.');
+      }
+    }).catch((err) => {
+      console.error('file not found.');
+      next(err);
+    })
+  } catch (error) {
+    console.error('file not found.');
+    next(error);
+  }
+}
+
+/*
+async function downloadNewspaper(req, res, next) {
+  let dateStr = req.params.date;
   console.log(dateStr);
   const cwd = path.join(__dirname, '/downloads');
   let fileName = `seema-sandesh-${formatDate(dateStr)}.pdf`;
@@ -125,6 +153,7 @@ async function downloadNewspaper(req, res, next) {
     next(error);
   }
 }
+*/
 
 function formatDate(date) {
   var d = new Date(date),
