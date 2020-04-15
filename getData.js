@@ -16,10 +16,12 @@ async function postCoordinates(req, res) {
   let [newsData] = await datastore.runQuery(query);
   let news = newsItems.map(item => {
     let [data] = newsData.filter(n => item.id === n.name);
-    data.coordinates = item.coordinates;
-    return {
-      key: datastore.key([kind, item.id]),
-      data
+    if(data) {
+      data.coordinates = item.coordinates;
+      return {
+        key: datastore.key([kind, item.id]),
+        data
+      }
     }
   });  
   await datastore.save(news);
