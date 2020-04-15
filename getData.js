@@ -1,7 +1,7 @@
 const {Datastore} = require('@google-cloud/datastore');
 const {Storage} = require('@google-cloud/storage');
 const kind = 'images';
-const domain = 'https://storage.cloud.google.com';
+const domain = 'https://storage.googleapis.com';
 const bucketName = 'seema-sandesh-epaper';
 
 const datastore = new Datastore();
